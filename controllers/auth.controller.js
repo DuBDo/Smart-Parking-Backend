@@ -40,11 +40,12 @@ exports.login = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch){
+      return res.status(400).json({ message: "Invalid password" });
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: "7d",
+      expiresIn: "5h",
     });
 
     res.status(200).json({
