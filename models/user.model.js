@@ -24,6 +24,17 @@ const userSchema = new mongoose.Schema(
       enum: ["driver", "owner", "admin"],
       default: "driver",
     },
+    resetOtp:{
+      type: String
+    },
+    isOtpVerified:{
+      type: Boolean,
+      defauult:false
+    },
+    otpExpires:{
+      type:Date,
+      
+    }
   },
   { timestamps: true }
 );
