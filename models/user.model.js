@@ -4,7 +4,6 @@ const userSchema = new mongoose.Schema(
   {
     fullName: {
       type: String,
-      required: true,
     },
     email: {
       type: String,
@@ -13,11 +12,20 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+    },
+    googleId: {
+      type: String,
+    },
+    isVerified:{
+      type: Boolean,
+      default: false
+    },
+    isLoggedIn: {
+      type: Boolean,
+      default: false
     },
     mobile: {
-      type: String,
-      required: true,
+      type: String
     },
     role: {
       type: String,
