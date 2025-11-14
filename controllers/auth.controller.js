@@ -22,7 +22,20 @@ const signup = async (req, res) => {
       mobile,
     });
 
-    res.status(201).json({ message: "User created successfully", user });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
+      expiresIn: "5h",
+    });
+
+    res.status(201).json({ message: "User created successfully",
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
