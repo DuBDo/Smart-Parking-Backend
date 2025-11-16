@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const isAuthenticated = require('../middlewares/isAuthenticated');
 
 // Google authentication 
-authRouter.get('/google', passport.authenticate('google', {scope:['profile', 'email']}));
+authRouter.get('/google', passport.authenticate('google', {scope:['openid', 'profile', 'email']}));
 authRouter.get('/google/callback',
     passport.authenticate('google', {session: false}),
     (req, res) =>{

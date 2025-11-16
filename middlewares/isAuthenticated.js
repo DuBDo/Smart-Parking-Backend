@@ -31,7 +31,8 @@ const isAuthenticated = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("Auth error:", error);
-    res.status(401).json({ message: "Unauthorized, token invalid or expired" });
+    res.status(401).json({ message: "Unauthorized, token expired" });
+    
   }
 };
 

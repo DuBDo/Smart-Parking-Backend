@@ -5,9 +5,9 @@ const setOtpMail = require("../utils/mail");
 
 const signup = async (req, res) => {
   try {
-    const { fullName, email, password, mobile } = req.body;
+    const { firstName, surName, email, password, mobile } = req.body;
 
-    if (!fullName || !email || !password || !mobile)
+    if (!firstName || !surName || !email || !password || !mobile)
       return res.status(400).json({ message: "All fields are required" });
 
     const existingUser = await User.findOne({ email });
@@ -16,7 +16,8 @@ const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
-      fullName,
+      firstName,
+      surName,
       email,
       password: hashedPassword,
       mobile,
@@ -30,10 +31,12 @@ const signup = async (req, res) => {
       token,
       user: {
         id: user._id,
-        fullName: user.fullName,
+        firstName: user.firstName, 
+        surName: user.surName, 
         email: user.email,
         mobile: user.mobile,
         role: user.role,
+        isVerified: user.isVerified
       },
     });
   } catch (error) {
@@ -67,10 +70,12 @@ const login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        fullName: user.fullName,
+        firstName: user.firstName,
+        surName: user.surName,
         email: user.email,
         mobile: user.mobile,
         role: user.role,
+        isVerified: user.isVerified
       },
     });
   } catch (error) {

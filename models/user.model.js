@@ -2,8 +2,11 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    fullName: {
+    firstName: {
       type: String,
+    },
+    surName: {
+      type: String
     },
     email: {
       type: String,
@@ -40,9 +43,23 @@ const userSchema = new mongoose.Schema(
       defauult:false
     },
     otpExpires:{
-      type:Date,
-      
-    }
+      type:Date,      
+    },
+    vehicle:[
+      {
+        plate:{
+          type:String,
+          required: true
+        },
+        image:{
+          type:String
+        },
+        type:{
+          type:String,
+          default: 'Car'
+        }
+      }
+    ]
   },
   { timestamps: true }
 );

@@ -10,13 +10,15 @@ passport.use(new GoogleStrategy({
     async (accessToken, refreshToken, profile, cb) => {
         try {
             let user = await User.findOne({ googleId: profile.id });
-            if(!user){
-                const user = await User.create({
-                    googleId : profile.id,
-                    fullName : profile.displayName,
+            if (!user) {
+                console.log(profile, profile.displayName)
+                user = await User.create({
+                    googleId: profile.id,
                     email: profile.emails[0].value,
+                    firstName: profile.displayName.split(' ')[0],
+                    surName: profile.displayName.split(' ').slice(1).join(' '),
                     isLoggedIn: true,
-                    isVerified: true
+                    isVerified: profile.emails[0].verified
                 })
             }
             return cb(null, user);
