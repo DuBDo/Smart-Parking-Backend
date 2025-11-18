@@ -1,5 +1,5 @@
 const express = require("express");
-const { signup, login, sendOtp, verifyOtp, resetPassword } = require("../controllers/auth.controller");
+const { signup, login, sendOtp, verifyOtp, resetPassword, deleteAccount } = require("../controllers/auth.controller");
 const passport = require("passport");
 const authRouter = express.Router();
 const jwt = require('jsonwebtoken');
@@ -28,6 +28,7 @@ authRouter.get('/me', isAuthenticated, (req, res)=>{
 })
 authRouter.post("/signup", signup);
 authRouter.post("/login", login);
+authRouter.delete('/delete',isAuthenticated, deleteAccount);
 authRouter.post('/send-otp', sendOtp);
 authRouter.post('/verify-otp', verifyOtp);
 authRouter.post('/reset-password', resetPassword);

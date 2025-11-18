@@ -83,6 +83,27 @@ const login = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+const deleteAccount = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user || !user._id) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const result = await User.findByIdAndDelete(user._id);
+
+    if (!result) {
+      return res.status(404).json({ message: "User does not exist" });
+    }
+
+    return res.status(200).json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Delete Account error' });
+  }
+};
+
 
 const sendOtp = async (req, res) => {
   try {
@@ -155,6 +176,7 @@ const resetPassword = async(req, res)=>{
 module.exports = {
   signup,
   login,
+  deleteAccount,
   sendOtp,
   verifyOtp,
   resetPassword
