@@ -160,6 +160,12 @@ exports.ownerConfirmBooking = async (req, res) => {
       if (String(lot.owner) !== String(ownerId))
         throw { status: 403, message: "Only owner can confirm" };
 
+      if (lot.autoApproval)
+        throw {
+          status: 403,
+          message:
+            "Your parking lot is capable of auto-accepting the pending requests",
+        };
       // capacity check
       const occupied = await findOverlappingCount(
         booking.parkingLotId,
@@ -174,27 +180,29 @@ exports.ownerConfirmBooking = async (req, res) => {
       booking.bookingStatus = "confirmed";
       await booking.save();
 
-      // reject overlapping pending bookings
-      const pendingOverlap = await Booking.find({
-        parkingLotId: booking.parkingLotId,
-        bookingStatus: "pending",
-        $or: [
-          {
-            startTime: { $lt: booking.endTime },
-            endTime: { $gt: booking.startTime },
-          },
-        ],
-      });
-      for (const p of pendingOverlap) {
-        if (String(p._id) !== String(booking._id)) {
-          p.bookingStatus = "rejected";
-          await p.save();
-          sendRealtime(
-            req.app.get("io"),
-            `user:${String(p.driverId)}`,
-            "booking:rejected",
-            p
-          );
+      // reject overlapping pending bookings only if the slot becomes full
+      if (occupied == lot.totalSlots - 1) {
+        const pendingOverlap = await Booking.find({
+          parkingLotId: booking.parkingLotId,
+          bookingStatus: "pending",
+          $or: [
+            {
+              startTime: { $lt: booking.endTime },
+              endTime: { $gt: booking.startTime },
+            },
+          ],
+        });
+        for (const p of pendingOverlap) {
+          if (String(p._id) !== String(booking._id)) {
+            p.bookingStatus = "rejected";
+            await p.save();
+            sendRealtime(
+              req.app.get("io"),
+              `user:${String(p.driverId)}`,
+              "booking:rejected",
+              p
+            );
+          }
         }
       }
 
@@ -238,7 +246,9 @@ exports.cancelBooking = async (req, res) => {
     const isOwner = lot && String(lot.owner) === String(userId);
     const isDriver = String(booking.driverId) === String(userId);
     if (!isOwner && !isDriver)
-      return res.status(403).json({ message: "Forbidden" });
+      return res.status(403).json({
+        message: "Forbidden!! Only owner or driver can reject/cancel bookings",
+      });
 
     // if vehicle is inside, disallow cancel via this endpoint (must exit first)
     if (booking.isInside)
@@ -247,6 +257,7 @@ exports.cancelBooking = async (req, res) => {
         .json({ message: "Cannot cancel while vehicle is inside" });
     if (isOwner) {
       booking.bookingStatus = "rejected";
+      booking.status = "past";
       await booking.save();
 
       sendRealtime(
@@ -267,6 +278,7 @@ exports.cancelBooking = async (req, res) => {
       });
     } else {
       booking.bookingStatus = "cancelled";
+      booking.status = "past";
       await booking.save();
 
       sendRealtime(
@@ -294,6 +306,50 @@ exports.cancelBooking = async (req, res) => {
   }
 };
 
+exports.getOwnerBookings = async (req, res) => {
+  try {
+    const ownerId = req.user._id;
+    const { status, lotId } = req.params;
+    const { limit = 10, skip = 0 } = req.query;
+    let options = {
+      parkingLotId: lotId,
+      status,
+    };
+
+    const lot = await ParkingLot.findById(lotId);
+    if (!lot) throw { status: 404, message: "Parking lot not found" };
+
+    if (String(lot.owner) !== String(ownerId))
+      throw { status: 403, message: "You are not the owner of this lot" };
+
+    const totalCounts = await Booking.countDocuments(options);
+    const totalPages = Math.ceil(totalCounts / limit);
+
+    const bookings = await Booking.find(options)
+      .sort({ createdAt: -1 })
+      .skip(parseInt(skip))
+      .limit(parseInt(limit))
+      .populate({
+        path: "driverId",
+        select: "-password",
+      })
+      .populate({
+        path: "parkingLotId",
+      });
+
+    return res.status(200).json({
+      success: true,
+      bookings,
+      counts: totalCounts,
+      pages: totalPages,
+    });
+  } catch (error) {
+    console.log("getOwnerBookings error", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "getOwnerBookings error" });
+  }
+};
 // ANPR entry — secure webhook from Pi; marks booking active and sets gateEntryTime
 exports.handleAnprEntry = async (req, res) => {
   try {
@@ -449,7 +505,7 @@ exports.handleAnprExit = async (req, res) => {
 //   }
 // };
 
-exports.getBookings = async (req, res) => {
+exports.getDriverBookings = async (req, res) => {
   try {
     const driverId = req.user._id;
     const status = req.params.status;

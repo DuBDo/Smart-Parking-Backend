@@ -36,6 +36,7 @@ io.on("connection", (socket) => {
   console.log("socket connected", socket.id);
 
   const userId = socket.handshake.query?.userId;
+  console.log(userId);
   const ownerParkingLotId = socket.handshake.query?.ownerParkingLotId;
   if (userId) socket.join(`user:${userId}`);
   if (ownerParkingLotId) socket.join(`owner:${ownerParkingLotId}`);
