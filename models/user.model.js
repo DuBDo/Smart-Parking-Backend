@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema(
     mobile: {
       type: String
     },
+    isMobileVerified:{
+      type:Boolean,
+      default: false
+    },
     role: {
       type: String,
       enum: ["driver", "owner", "admin"],

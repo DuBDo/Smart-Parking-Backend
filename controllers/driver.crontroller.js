@@ -30,9 +30,6 @@ const addVehicle = async (req, res) => {
         const user = req.user;
         const { plate } = req.body;
         
-        console.log('user: ', user);
-        console.log('plate: ', plate);
-        console.log('file: ', req.file);
         if (!plate) {
             return res.status(400).json({ message: "Plate number required" });
         }
