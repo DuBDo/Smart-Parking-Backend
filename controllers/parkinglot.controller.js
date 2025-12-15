@@ -71,6 +71,20 @@ const listParkingLot = async (req, res) => {
   }
 };
 
+const getOneParkingLot = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const parkingLot = await ParkingLot.findById(id);
+    if (!parkingLot)
+      return res.status(400).json({ message: "Parking lot not found" });
+
+    return res.status(200).json(parkingLot);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "getOneParingLot error", error });
+  }
+};
 const getParkingLot = async (req, res) => {
   try {
     const parkingLots = await ParkingLot.find();
@@ -78,10 +92,11 @@ const getParkingLot = async (req, res) => {
     return res.status(200).json(parkingLots);
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "List parking-lot error", error });
+    return res.status(500).json({ message: "getParkingLot error", error });
   }
 };
 module.exports = {
   listParkingLot,
+  getOneParkingLot,
   getParkingLot,
 };

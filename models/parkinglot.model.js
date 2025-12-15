@@ -21,6 +21,27 @@ const ParkingLotSchema = new mongoose.Schema(
       enum: ["Driveway", "Car-park", "Garage"],
       default: "Driveway",
     },
+    bookingType: {
+      type: String,
+      enum: ["hourly/daily", "monthly", "all"],
+      default: "all",
+    },
+    // for monthly plans
+
+    // only for monthly and all bookingType
+    monthlyPrice: Number,
+
+    // cuz normal user need to pay before leaving the parking lot,
+    firstPayment: {
+      type: String,
+      enum: [
+        "on-starting-day",
+        "before-end-of-the-month",
+        "within-first-week",
+        "within-15-days",
+      ],
+      default: "on-starting-day",
+    },
 
     size: {
       type: String,
@@ -101,7 +122,6 @@ const ParkingLotSchema = new mongoose.Schema(
       enum: ["cash", "online", "both"],
       default: "both",
     },
-
     // Hardware
     anprCameraId: { type: String },
     gateControllerId: { type: String },

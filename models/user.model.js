@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     surName: {
-      type: String
+      type: String,
     },
     email: {
       type: String,
@@ -19,51 +19,54 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
     },
-    isVerified:{
+    isVerified: {
       type: Boolean,
-      default: false
+      default: false,
     },
     isLoggedIn: {
       type: Boolean,
-      default: false
+      default: false,
     },
     mobile: {
-      type: String
+      type: String,
     },
-    isMobileVerified:{
-      type:Boolean,
-      default: false
+    isMobileVerified: {
+      type: Boolean,
+      default: false,
     },
     role: {
       type: String,
       enum: ["driver", "owner", "admin"],
       default: "driver",
     },
-    resetOtp:{
-      type: String
+    resetOtp: {
+      type: String,
     },
-    isOtpVerified:{
+    isOtpVerified: {
       type: Boolean,
-      defauult:false
+      defauult: false,
     },
-    otpExpires:{
-      type:Date,      
+    otpExpires: {
+      type: Date,
     },
-    vehicle:[
+    vehicle: [
       {
-        plate:{
-          type:String,
-          required: true
+        plate: {
+          type: String,
+          required: true,
         },
-        image:{
-          type:String
+        image: {
+          type: String,
         },
-        type:{
-          type:String,
-          default: 'Car'
-        }
-      }
-    ]
+        type: {
+          type: String,
+          default: "Car",
+        },
+        brand: {
+          type: String,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

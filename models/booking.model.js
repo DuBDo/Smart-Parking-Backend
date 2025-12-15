@@ -17,10 +17,11 @@ const bookingSchema = new mongoose.Schema(
     slotNumber: { type: Number }, // optional
 
     vehiclePlate: { type: String, required: true },
-    vehicleType: {
+
+    bookingType: {
       type: String,
-      enum: ["car", "bike", "scooter", "van"],
-      default: "car",
+      enum: ["hourly/daily", "monthly"],
+      required: true,
     },
 
     startTime: { type: Date, required: true },
