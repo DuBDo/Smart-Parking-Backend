@@ -36,8 +36,10 @@ async function findOverlappingCount(
 exports.createBooking = async (req, res) => {
   try {
     const driverId = req.user._id;
-    const { parkingLotId, startTime, endTime, vehiclePlate, vehicleType } =
+    const { parkingLotId, fromTime, untilTime, vehiclePlate, vehicleType } =
       req.body;
+    const startTime = JSON.parse(fromTime);
+    const endTime = JSON.parse(untilTime);
     if (!parkingLotId || !startTime || !endTime || !vehiclePlate) {
       return res.status(400).json({
         message: "parkingLotId, startTime, endTime, vehiclePlate required",
@@ -88,7 +90,9 @@ exports.createBooking = async (req, res) => {
           endTime: end,
           pricePerHour,
           totalPrice,
-          bookingStatus: lot.autoApproval ? "confirmed" : "pending",
+          bookingStatus: "pending-payment",
+          // lot.autoApproval ? "confirmed" : "pending",
+          status: "pending",
           paymentStatus: "pending",
           amountDue: totalPrice,
         });

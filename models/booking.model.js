@@ -1,6 +1,11 @@
 // models/booking.model.js
 const mongoose = require("mongoose");
 
+const tenMinutesFromNow = () => {
+  const now = new Date();
+  now.setTime(now.getTime() + 10 * 60 * 1000);
+  return now;
+};
 const bookingSchema = new mongoose.Schema(
   {
     driverId: {
@@ -20,8 +25,8 @@ const bookingSchema = new mongoose.Schema(
 
     bookingType: {
       type: String,
-      enum: ["hourly/daily", "monthly"],
-      required: true,
+      enum: ["hourly/daily", "monthly", "all"],
+      default: "all",
     },
 
     startTime: { type: Date, required: true },
@@ -34,6 +39,7 @@ const bookingSchema = new mongoose.Schema(
     bookingStatus: {
       type: String,
       enum: [
+        "pending-payment",
         "pending",
         "confirmed",
         "active",
@@ -67,7 +73,7 @@ const bookingSchema = new mongoose.Schema(
     extraCharges: { type: Number, default: 0 },
     amountDue: { type: Number, default: 0 },
 
-    holdExpiresAt: { type: Date }, // optional TTL for hold
+    holdExpiresAt: { type: Date, default: tenMinutesFromNow }, // optional TTL for hold
   },
   { timestamps: true }
 );

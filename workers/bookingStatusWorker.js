@@ -20,6 +20,19 @@ module.exports = function startBookingWorker(io) {
     const now = new Date();
 
     try {
+      //pending-payment -> expired
+      //pending-payment -> expired
+
+      const expired = await Booking.find({
+        bookingStatus: "pending-payment",
+        holdExpiresAt: { $lt: now },
+      });
+
+      for (const booking of expired) {
+        booking.bookingStatus = "expired";
+        booking.status = "past";
+        await booking.save();
+      }
       // 1) Move confirmed -> in-progress when startTime <= now < endTime
       // also peaymentStatus must be paid before leaving the lot
       const toInProgress = await Booking.find({

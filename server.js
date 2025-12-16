@@ -7,6 +7,8 @@ const authRouter = require("./routes/auth.routes");
 const driverRouter = require("./routes/driver.routes");
 const parkingRouter = require("./routes/parkinglot.routes");
 const bookingRouter = require("./routes/booking.routes");
+const paymentRouter = require("./routes/payment.routes");
+
 require("./config/passport");
 
 dotenv.config();
@@ -53,6 +55,7 @@ app.use("/api/V1/driver", driverRouter);
 app.use("/api/V1/parking-lot", parkingRouter);
 // mount bookings routes after middleware
 app.use("/api/V1/booking", bookingRouter);
+app.use("/api/V1/payment", paymentRouter);
 
 // start cron worker
 startBookingWorker(io);
