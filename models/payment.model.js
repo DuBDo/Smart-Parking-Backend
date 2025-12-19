@@ -26,6 +26,11 @@ const paymentSchema = new mongoose.Schema(
     },
     rawResponse: Object,
     verifiedAt: Date,
+
+    // for khalti
+    pidx: String,
+    rawKhaltiInitiateResponse: Object,
+    rawKhaltiVerifyResponse: Object,
   },
   { timestamps: true }
 );

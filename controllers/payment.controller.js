@@ -4,6 +4,7 @@ const Booking = require("../models/booking.model");
 const ParkingLot = require("../models/parkinglot.model");
 const { generateSignature } = require("../utils/esewaSignature");
 const axios = require("axios");
+const { khaltiInitiate } = require("../utils/khalti.utils");
 
 const initiateEsewaPayment = async (req, res) => {
   const { bookingId, amount } = req.body;
@@ -110,15 +111,10 @@ const esewaSuccess = async (req, res) => {
         verifiedAt: new Date(),
       }
     );
-    let bookingStatus;
-    if (parkingLot.autoApproval == true) {
-      bookingStatus = "confirmed";
-    } else {
-      (bookingStatus = "pending"), (booking.status = "pending");
-    }
-    booking.bookingStatus = bookingStatus;
 
+    booking.bookingStatus = "confirmed";
     await booking.save();
+
     res.redirect(
       `${process.env.CLIENT_URL}/dashboard/bookings-made?status=success`
     );
@@ -143,8 +139,165 @@ const esewaFailure = async (req, res) => {
   );
 };
 
+// for khalti
+
+/**
+ * STEP 1: Initiate payment
+ */
+const initiateKhaltiPayment = async (req, res) => {
+  const { bookingId } = req.body;
+
+  const booking = await Booking.findById(bookingId);
+  if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+  if (booking.paymentStatus === "paid") {
+    return res.status(400).json({ message: "Already paid" });
+  }
+
+  const khaltiRes = await khaltiInitiate({
+    amount: booking.totalPrice * 100, // paisa
+    purchaseOrderId: bookingId,
+    purchaseOrderName: "Parking Booking",
+    customer: {
+      name: req.user.firstName,
+      email: req.user.email,
+      phone: req.user.mobile,
+    },
+  });
+
+  // Save payment attempt
+  await Payment.create({
+    bookingId: booking._id,
+    gateway: "KHALTI",
+    pidx: khaltiRes.pidx,
+    status: "pending",
+    rawKhaltiInitiateResponse: khaltiRes,
+  });
+
+  res.json({
+    payment_url: khaltiRes.payment_url,
+  });
+};
+
+/**
+ * STEP 2: Khalti redirect (SUCCESS)
+ */
+const khaltiSuccess = async (req, res) => {
+  const { pidx } = req.query;
+
+  // VERIFY payment
+  const verifyRes = await axios.post(
+    "https://dev.khalti.com/api/v2/epayment/lookup/",
+    { pidx },
+    {
+      headers: {
+        Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  // Save raw verify response
+  const payment = await Payment.findOne({ pidx });
+  payment.rawKhaltiVerifyResponse = verifyRes.data;
+
+  if (verifyRes.data.status === "Completed") {
+    payment.status = "paid";
+    await payment.save();
+
+    // MARK BOOKING PAID + LOCK SLOT
+    const booking = await Booking.findById(payment.bookingId);
+    booking.bookingStatus = "confirmed";
+    booking.paymentStatus = "paid";
+    // booking.isSlotLocked = true;
+    await booking.save();
+
+    return res.redirect(
+      `${process.env.CLIENT_URL}/dashboard/bookings-made?status=success`
+    );
+  }
+
+  payment.status = "FAILED";
+  await payment.save();
+
+  `${process.env.CLIENT_URL}/dashboard/bookings-made?status=failed`;
+};
+
+// const khaltiClient = require("../utils/khalti.utils");
+
+// const initiateKhaltiPayment = async (req, res) => {
+//   const { bookingId, amount } = req.body;
+//   const transactionUuid = uuidv4();
+
+//   const payment = await Payment.create({
+//     bookingId,
+//     amount,
+//     transactionUuid,
+//     status: "pending",
+//     gateway: "KHALTI",
+//   });
+
+//   const payload = {
+//     return_url: `${process.env.BACKEND_BASE_URL}/api/V1/payment/khalti/success`,
+//     website_url: "http://localhost:5173",
+//     amount: amount * 100, // paisa
+//     purchase_order_id: transactionUuid,
+//     purchase_order_name: "Parking Booking",
+//   };
+
+//   const { data } = await khaltiClient.post("initiate/", payload);
+
+//   await Payment.findByIdAndUpdate(payment._id, {
+//     pidx: data.pidx,
+//   });
+
+//   res.json({
+//     pidx: data.pidx,
+//     payment_url: data.payment_url,
+//   });
+// };
+
+// const verifyKhaltiPayment = async (req, res) => {
+//   const { pidx } = req.body;
+
+//   const payment = await Payment.findOne({ pidx });
+
+//   if (!payment) {
+//     return res.status(404).json({ message: "Payment not found" });
+//   }
+
+//   // Idempotency
+//   if (payment.status === "paid") {
+//     return res.json({ status: "already_verified" });
+//   }
+
+//   const { data } = await khaltiClient.post("lookup/", { pidx });
+
+//   if (data.status !== "Completed") {
+//     return res.status(400).json({ status: "failed" });
+//   }
+
+//   await Payment.updateOne(
+//     { pidx },
+//     {
+//       status: "paid",
+//       rawResponse: data,
+//       verifiedAt: new Date(),
+//     }
+//   );
+
+//   // Confirm booking
+//   await Booking.findByIdAndUpdate(payment.bookingId, {
+//     bookingStatus: "confirmed",
+//   });
+
+//   res.json({ status: "success" });
+// };
+
 module.exports = {
   initiateEsewaPayment,
   esewaSuccess,
   esewaFailure,
+  initiateKhaltiPayment,
+  khaltiSuccess,
 };
