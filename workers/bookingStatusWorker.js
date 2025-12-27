@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const Booking = require("../models/booking.model");
+const ChatRoom = require("../models/chatRoom.model");
 
 const calculateOverstayCharge = (endTime, now, ratePer15) => {
   if (now <= endTime)
@@ -122,6 +123,16 @@ module.exports = function startBookingWorker(io) {
           await b.save();
           // vehicle still inside past endTime: notify owner (overstay)
           io?.to(`owner:${b.parkingLotId}`).emit("booking:overstay", b);
+        }
+      }
+      //send completed booked messages to past messages
+      const chatRooms = await ChatRoom.find({ status: "booked" }).populate({
+        path: "bookingId",
+      });
+      for (const room of chatRooms) {
+        if (room.bookingId.gateExitTime && room.bookingId.status == "past") {
+          room.status("closed");
+          await room.save();
         }
       }
     } catch (err) {

@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require("uuid");
 const Payment = require("../models/payment.model");
 const Booking = require("../models/booking.model");
 const ParkingLot = require("../models/parkinglot.model");
+const ChatRoom = require("../models/chatRoom.model");
+
 const { generateSignature } = require("../utils/esewaSignature");
 const axios = require("axios");
 const { khaltiInitiate } = require("../utils/khalti.utils");
@@ -9,10 +11,13 @@ const { khaltiInitiate } = require("../utils/khalti.utils");
 const initiateEsewaPayment = async (req, res) => {
   const { bookingId, amount } = req.body;
 
+  const booking = await Booking.findById(bookingId);
+
   const transactionUuid = uuidv4();
 
   await Payment.create({
     bookingId,
+    parkingLotId: booking.parkingLotId,
     amount,
     transactionUuid,
     gateway: "ESEWA",
@@ -87,7 +92,7 @@ const esewaSuccess = async (req, res) => {
     }
 
     // 2️⃣ Idempotency check
-    if (payment.status === "PAID") {
+    if (payment.status === "paid") {
       return res.redirect("/payment-success");
     }
 
@@ -100,7 +105,10 @@ const esewaSuccess = async (req, res) => {
     }
 
     // 4️⃣ Update payment + booking atomically
-    const booking = await Booking.findById(payment.bookingId);
+    const booking = await Booking.findById(payment.bookingId).populate({
+      path: "parkingLotId",
+      populate: { path: "owner", model: "User", select: "_id" },
+    });
     const parkingLot = await ParkingLot.findById(booking.parkingLotId);
     await Payment.updateOne(
       { transactionUuid: transaction_uuid },
@@ -111,10 +119,18 @@ const esewaSuccess = async (req, res) => {
         verifiedAt: new Date(),
       }
     );
-
+    parkingLot.totalBookings += 1;
     booking.bookingStatus = "confirmed";
-    await booking.save();
+    booking.paymentStatus = "paid";
 
+    await booking.save();
+    await parkingLot.save();
+    await ChatRoom.create({
+      bookingId: booking._id,
+      driverId: booking.driverId,
+      ownerId: booking.parkingLotId.owner,
+      parkingLotId: booking.parkingLotId,
+    });
     res.redirect(
       `${process.env.CLIENT_URL}/dashboard/bookings-made?status=success`
     );
@@ -168,6 +184,8 @@ const initiateKhaltiPayment = async (req, res) => {
   // Save payment attempt
   await Payment.create({
     bookingId: booking._id,
+    amount: booking.totalPrice,
+    parkingLotId: booking.parkingLotId,
     gateway: "KHALTI",
     pidx: khaltiRes.pidx,
     status: "pending",
@@ -207,11 +225,26 @@ const khaltiSuccess = async (req, res) => {
 
     // MARK BOOKING PAID + LOCK SLOT
     const booking = await Booking.findById(payment.bookingId);
+    const parkingLot = await ParkingLot.findById(
+      booking.parkingLotId,
+      "_id owner"
+    );
+
+    parkingLot.totalBookings += 1;
+
     booking.bookingStatus = "confirmed";
     booking.paymentStatus = "paid";
     // booking.isSlotLocked = true;
     await booking.save();
+    await parkingLot.save();
 
+    await ChatRoom.create({
+      bookingId: booking._id,
+      driver: booking.driverId,
+      owner: parkingLot.owner,
+      parkingLotId: parkingLot._id,
+      status: "booked",
+    });
     return res.redirect(
       `${process.env.CLIENT_URL}/dashboard/bookings-made?status=success`
     );

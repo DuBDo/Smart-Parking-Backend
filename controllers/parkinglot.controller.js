@@ -1,4 +1,5 @@
 const ParkingLot = require("../models/parkinglot.model");
+const Booking = require("../models/booking.model");
 const User = require("../models/user.model");
 const fileUploaderOnCloudinary = require("../utils/cloudinary");
 
@@ -87,9 +88,76 @@ const getOneParkingLot = async (req, res) => {
 };
 const getParkingLot = async (req, res) => {
   try {
-    const parkingLots = await ParkingLot.find();
+    const {
+      lat,
+      lon,
+      bookingType,
+      startTime,
+      endTime,
+      availability,
+      startingOn,
+      maxDistance = 10000, //in kms
+    } = req.query;
 
-    return res.status(200).json(parkingLots);
+    if (!lat || !lon) {
+      return res
+        .status(400)
+        .json({ message: "Latitude and longitude required" });
+    }
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    // Find Nearest Parking Lots using $near
+    const nearestLots = await ParkingLot.find({
+      status: "approved",
+      isOpen: true,
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(lon), parseFloat(lat)], // [longitude, latitude]
+          },
+          $maxDistance: parseInt(maxDistance),
+        },
+      },
+      $or: [{ bookingType: "all" }, { bookingType: bookingType }],
+    }).lean();
+
+    //Filter for actual availability based on Bookings
+    const availabilityResults = await Promise.all(
+      nearestLots.map(async (lot) => {
+        // Check for overlapping bookings in this specific lot during user's time
+        const overlappingBookingsCount = await Booking.countDocuments({
+          parkingLotId: lot._id,
+          bookingStatus: { $in: ["confirmed", "active", "pending"] }, // only count valid bookings
+          $or: [
+            { startTime: { $lt: end }, endTime: { $gt: start } }, // The Overlap Formula
+          ],
+        });
+        const slotsRemaining = lot.totalSlots - overlappingBookingsCount;
+
+        if (slotsRemaining > 0) {
+          // Calculate distance (MongoDB provides this if you use aggregate,
+          // but for .find() we can return the lot)
+          return {
+            ...lot,
+            availableSlotsCount: slotsRemaining,
+            isAvailable: true,
+          };
+        }
+        return null;
+      })
+    );
+    // Remove nulls (lots that are full)
+    const finalAvailableLots = availabilityResults.filter(
+      (lot) => lot !== null
+    );
+
+    return res.status(200).json({
+      success: true,
+      count: finalAvailableLots.length,
+      parkingLots: finalAvailableLots,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "getParkingLot error", error });

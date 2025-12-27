@@ -8,6 +8,7 @@ const driverRouter = require("./routes/driver.routes");
 const parkingRouter = require("./routes/parkinglot.routes");
 const bookingRouter = require("./routes/booking.routes");
 const paymentRouter = require("./routes/payment.routes");
+const chatRouter = require("./routes/message.routes");
 
 require("./config/passport");
 
@@ -38,11 +39,20 @@ io.on("connection", (socket) => {
   console.log("socket connected", socket.id);
 
   const userId = socket.handshake.query?.userId;
-  console.log(userId);
   const ownerParkingLotId = socket.handshake.query?.ownerParkingLotId;
   if (userId) socket.join(`user:${userId}`);
   if (ownerParkingLotId) socket.join(`owner:${ownerParkingLotId}`);
   socket.join("map");
+
+  //For messaging
+  socket.on("join-chat-room", (chatRoomId) => {
+    socket.join(`chat:${chatRoomId}`);
+  });
+  socket.on("new-message", (newMessageReceived, sender) => {
+    socket
+      .to(`user:${newMessageReceived.receiver}`)
+      .emit("message-received", newMessageReceived);
+  });
 
   socket.on("disconnect", () => console.log("disconnected", socket.id));
 });
@@ -56,6 +66,7 @@ app.use("/api/V1/parking-lot", parkingRouter);
 // mount bookings routes after middleware
 app.use("/api/V1/booking", bookingRouter);
 app.use("/api/V1/payment", paymentRouter);
+app.use("/api/V1/chat", chatRouter);
 
 // start cron worker
 startBookingWorker(io);

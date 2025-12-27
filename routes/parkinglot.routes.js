@@ -5,7 +5,6 @@ const {
   getParkingLot,
   getOneParkingLot,
 } = require("../controllers/parkinglot.controller");
-const {} = require("../middlewares/multer.middlerware");
 const upload = require("../middlewares/multer.middlerware");
 
 const parkingRouter = express.Router();
