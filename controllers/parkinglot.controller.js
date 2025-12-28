@@ -96,7 +96,7 @@ const getParkingLot = async (req, res) => {
       endTime,
       availability,
       startingOn,
-      maxDistance = 10000, //in kms
+      maxDistance = 2000, //in kms
     } = req.query;
 
     if (!lat || !lon) {
