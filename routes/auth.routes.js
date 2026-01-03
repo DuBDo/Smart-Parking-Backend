@@ -23,7 +23,7 @@ authRouter.get(
   (req, res) => {
     try {
       const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET_KEY, {
-        expiresIn: "5h",
+        expiresIn: "7d",
       });
 
       res.redirect(`${process.env.CLIENT_URL}/auth-success?token=${token}`);

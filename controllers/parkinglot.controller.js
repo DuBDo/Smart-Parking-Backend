@@ -75,11 +75,12 @@ const listParkingLot = async (req, res) => {
 const getOneParkingLot = async (req, res) => {
   try {
     const id = req.params.id;
-
-    const parkingLot = await ParkingLot.findById(id);
+    const parkingLot = await ParkingLot.findById(id).populate(
+      "owner",
+      "mobile firstName  surName"
+    );
     if (!parkingLot)
       return res.status(400).json({ message: "Parking lot not found" });
-
     return res.status(200).json(parkingLot);
   } catch (error) {
     console.log(error);

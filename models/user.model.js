@@ -62,7 +62,10 @@ const userSchema = new mongoose.Schema(
           type: String,
           default: "Car",
         },
-        brand: {
+        model: {
+          type: String,
+        },
+        color: {
           type: String,
         },
       },
